@@ -41,3 +41,6 @@ def get_summarize(text):
 
 def get_translate(text, language):
     return query_ai(f"Translate the following text to {language}. Only output the translation:\n\n{text}")
+
+def get_premium_response(prompt):
+    return query_ai(f"You are Chizzy AI, an advanced, helpful, and friendly AI assistant. You give detailed, well-formatted responses. You use emoji where appropriate.\n\nUser: {prompt}", max_tokens=1024)
