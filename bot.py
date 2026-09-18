@@ -11,6 +11,9 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 SUPPORT_SERVER = os.getenv('SUPPORT_SERVER', '')
 PREMIUM_PRICE = "$5/month"
+PAYPAL_LINK = os.getenv('PAYPAL_LINK', '')
+CASHAPP_TAG = os.getenv('CASHAPP_TAG', '')
+OWNER_ID = os.getenv('OWNER_ID', '')
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -64,11 +67,66 @@ async def premium_cmd(interaction: discord.Interaction):
     )
     embed.add_field(name="🚀 Free Tier", value="• 5 second cooldown\n• Basic AI responses\n• Standard commands", inline=True)
     embed.add_field(name="⭐ Premium Tier", value="• 1 second cooldown\n• Better AI responses\n• Priority support\n• Premium badge", inline=True)
-    embed.add_field(name="💳 How to Upgrade", value=f"DM the bot owner or join our support server!", inline=False)
+    embed.add_field(name="💳 How to Upgrade", value="1. Join our support server\n2. Pay via PayPal/CashApp\n3. Send proof to bot owner\n4. Premium activated instantly!", inline=False)
     if SUPPORT_SERVER:
         embed.add_field(name="🔗 Support Server", value=f"[Join Here]({SUPPORT_SERVER})", inline=False)
-    embed.set_footer(text="Premium payments via PayPal/CashApp")
     await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="pay", description="Get payment info for Premium")
+async def pay_cmd(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="💳 Payment Info",
+        description=f"Premium costs **{PREMIUM_PRICE}** per server",
+        color=0x57F287
+    )
+    if PAYPAL_LINK:
+        embed.add_field(name="PayPal", value=f"[Click to Pay]({PAYPAL_LINK})", inline=False)
+    if CASHAPP_TAG:
+        embed.add_field(name="CashApp", value=f"**{CASHAPP_TAG}**", inline=False)
+    embed.add_field(name="📝 After Payment", value="1. Join support server\n2. Send screenshot/proof\n3. Include your Server ID\n4. Premium activated in minutes!", inline=False)
+    embed.set_footer(text="Premium is per-server, not per-user")
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="serverid", description="Get your server's ID")
+async def serverid_cmd(interaction: discord.Interaction):
+    if interaction.guild:
+        embed = discord.Embed(
+            title="🆔 Server ID",
+            description=f"Your server ID is: `{interaction.guild.id}`\n\nSend this with your payment proof!",
+            color=0x5865F2
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    else:
+        await interaction.response.send_message("This command only works in a server!", ephemeral=True)
+
+@bot.tree.command(name="activate", description="[OWNER ONLY] Activate premium for a server")
+@app_commands.describe(server_id="Server ID to activate", duration="Duration in days")
+async def activate_cmd(interaction: discord.Interaction, server_id: str, duration: int = 30):
+    if str(interaction.user.id) != OWNER_ID:
+        await interaction.response.send_message("Only the bot owner can use this command!", ephemeral=True)
+        return
+    premium = load_premium()
+    premium[server_id] = {
+        "activated": time.time(),
+        "expires": time.time() + (duration * 86400),
+        "days": duration
+    }
+    save_premium(premium)
+    await interaction.response.send_message(f"✅ Premium activated for server `{server_id}` for {duration} days!", ephemeral=True)
+
+@bot.tree.command(name="deactivate", description="[OWNER ONLY] Deactivate premium for a server")
+@app_commands.describe(server_id="Server ID to deactivate")
+async def deactivate_cmd(interaction: discord.Interaction, server_id: str):
+    if str(interaction.user.id) != OWNER_ID:
+        await interaction.response.send_message("Only the bot owner can use this command!", ephemeral=True)
+        return
+    premium = load_premium()
+    if server_id in premium:
+        del premium[server_id]
+        save_premium(premium)
+        await interaction.response.send_message(f"✅ Premium deactivated for server `{server_id}`!", ephemeral=True)
+    else:
+        await interaction.response.send_message("That server doesn't have premium!", ephemeral=True)
 
 @bot.tree.command(name="stats", description="View bot statistics")
 async def stats_cmd(interaction: discord.Interaction):
