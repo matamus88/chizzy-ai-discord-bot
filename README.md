@@ -1,4 +1,4 @@
-# AI Discord Bot
+# Chizzy AI Discord Bot
 
 A free AI-powered Discord bot with multiple features.
 
